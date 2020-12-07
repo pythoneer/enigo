@@ -1,6 +1,6 @@
 use libc;
 
-use crate::{Key, KeyboardControllable, MouseButton, MouseControllable};
+use crate::{Key, KeyboardControllable, MouseButton, MouseControllable, Extension};
 
 use self::libc::{c_char, c_int, c_void, useconds_t};
 use std::{borrow::Cow, ffi::CString, ptr};
@@ -44,6 +44,20 @@ extern "C" {
         window: Window,
         string: *const c_char,
         delay: useconds_t,
+    ) -> c_int;
+
+    fn xdo_get_viewport_dimensions(
+        xdo: Xdo,
+        width: *mut c_int,
+        height: *mut c_int,
+        screen: c_int,
+    ) -> c_int;
+
+    fn xdo_get_mouse_location(
+        xdo: Xdo,
+        x: *mut c_int,
+        y: *mut c_int,
+        screen_num: *mut c_int,
     ) -> c_int;
 }
 
@@ -251,5 +265,23 @@ impl KeyboardControllable for Enigo {
                 self.delay as useconds_t,
             );
         }
+    }
+}
+
+impl Extension for Enigo {
+    fn main_display_size(&self) -> (usize, usize) {
+        let mut width = 0;
+        let mut height = 0;
+        const MAIN_SCREEN: i32 = 0;
+        unsafe { xdo_get_viewport_dimensions(self.xdo, &mut width, &mut height, MAIN_SCREEN) };
+        (width as usize, height as usize)
+    }
+
+    fn mouse_location(&self) -> (i32, i32) {
+        let mut x = 0;
+        let mut y = 0;
+        let mut unused_screen_index = 0;
+        unsafe { xdo_get_mouse_location(self.xdo, &mut x, &mut y, &mut unused_screen_index) };
+        (x, y)
     }
 }
